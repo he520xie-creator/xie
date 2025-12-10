@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>奶茶咖啡 & 外卖美食（多人评分可滚动）</title>
+<title>奶茶咖啡 & 外卖美食（编辑隐藏版）</title>
 <style>
 body { font-family: Arial; padding: 20px; }
 .nav { margin-bottom: 20px; }
@@ -13,17 +13,18 @@ th, td { border:1px solid #ccc; padding:6px; vertical-align: top; word-break: br
 .star { font-size:20px; cursor:pointer; color:#ccc; display:inline-block; }
 .star.active { color: gold; }
 .add-row { margin-top:10px; padding:6px 12px; }
-select,input { margin-right:4px; }
+select,input,textarea { margin-right:4px; width:100%; box-sizing:border-box; }
+textarea { resize:none; }
 th { position: relative; user-select: none; }
 th .resizer { position:absolute; right:0; top:0; width:5px; cursor: col-resize; user-select:none; height:100%; }
-
-/* 文字三行截断 */
-.text-clamp { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; position:relative; }
-.text-clamp:hover::after { content:attr(data-full); position:absolute; background:#fff; border:1px solid #ccc; padding:6px; white-space: pre-wrap; z-index:10; left:0; top:100%; max-width:400px; }
 
 /* 推荐指数滚动容器 */
 .ratings-container { max-height:90px; overflow-y:auto; margin-bottom:4px; }
 .ratings-footer { font-weight:bold; margin-top:4px; }
+
+/* 文本显示和编辑切换 */
+.text-display { cursor:pointer; min-height:20px; }
+.text-edit { display:none; width:100%; box-sizing:border-box; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -88,20 +89,49 @@ function loadTable(){
     if(!Array.isArray(row.ratings)) row.ratings=[];
     const tr=document.createElement("tr");
     tr.innerHTML=`
-      <td><div class="text-clamp" contenteditable="true" data-full="${row.brand||''}" oninput="updateRowTime(${rowIndex})">${row.brand||''}</div></td>
-      <td><div class="text-clamp" contenteditable="true" data-full="${row.name||''}" oninput="updateRowTime(${rowIndex})">${row.name||''}</div></td>
+      <td>
+        <div class="text-display" onclick="showInput(this, ${rowIndex}, 'brand')">${row.brand||''}</div>
+        <input class="text-edit" type="text" value="${row.brand||''}" 
+          onblur="hideInput(this, ${rowIndex}, 'brand')" />
+      </td>
+      <td>
+        <div class="text-display" onclick="showInput(this, ${rowIndex}, 'name')">${row.name||''}</div>
+        <input class="text-edit" type="text" value="${row.name||''}" 
+          onblur="hideInput(this, ${rowIndex}, 'name')" />
+      </td>
       <td>
         <div class="ratings-container">${renderRatings(rowIndex,row.ratings)}</div>
         <button onclick="addRating(${rowIndex}, event)">+ 新增评价</button>
         <div class="ratings-footer">综合评分: ${calcAvg(row.ratings)}</div>
       </td>
       <td>${renderChannels(rowIndex,row.priceChannels)}</td>
-      <td><div class="text-clamp" contenteditable="true" data-full="${row.note||''}" oninput="updateRowTime(${rowIndex})">${row.note||''}</div></td>
+      <td>
+        <div class="text-display" onclick="showInput(this, ${rowIndex}, 'note')">${row.note||''}</div>
+        <textarea class="text-edit" rows="3" onblur="hideInput(this, ${rowIndex}, 'note')">${row.note||''}</textarea>
+      </td>
       <td>${row.updateTime||''}</td>
       <td><button onclick="deleteRow(${rowIndex}, event)">删除</button></td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+// ===== 文本编辑切换 =====
+function showInput(displayDiv,rowIndex,field){
+  const input = displayDiv.nextElementSibling;
+  displayDiv.style.display="none";
+  input.style.display="block";
+  input.focus();
+}
+
+function hideInput(input,rowIndex,field){
+  input.style.display="none";
+  const displayDiv = input.previousElementSibling;
+  displayDiv.style.display="block";
+  const data = currentPage==='coffee'?coffeeData:foodData;
+  data[rowIndex][field] = input.value;
+  displayDiv.innerText = input.value;
+  updateRowTime(rowIndex);
 }
 
 // ===== 多人评分 =====
@@ -145,14 +175,14 @@ function renderChannels(rowIndex,channels){
   let html='<div>';
   channels.forEach((item,i)=>{
     html += `<div style="margin-bottom:4px;">
-      <select onchange="setChannel(${rowIndex},${i},this.value, event)">
+      <select onchange="setChannel(${rowIndex},${i},this.value,event)">
         <option ${item.channel==='抖音'?'selected':''}>抖音</option>
         <option ${item.channel==='美团'?'selected':''}>美团</option>
         <option ${item.channel==='京东'?'selected':''}>京东</option>
         <option ${item.channel==='饿了么'?'selected':''}>饿了么</option>
       </select>
-      <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value, event)" style="width:60px"/>
-      <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value, event)" style="width:100px"/>
+      <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value,event)" style="width:60px"/>
+      <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value,event)" style="width:100px"/>
       <button onclick="removeChannel(${rowIndex},${i}, event)">删除</button>
     </div>`;
   });
@@ -174,13 +204,6 @@ function updateRowTime(rowIndex){ const data=currentPage==='coffee'?coffeeData:f
 // ===== 保存到 Firebase =====
 function saveData(){
   const data=currentPage==='coffee'?coffeeData:foodData;
-  const rows=document.querySelectorAll("#dataTable tbody tr");
-  rows.forEach((tr,index)=>{
-    const tds=tr.querySelectorAll("td .text-clamp");
-    data[index].brand=tds[0].innerText;
-    data[index].name=tds[1].innerText;
-    data[index].note=tds[2].innerText;
-  });
   db.ref(currentPage).set(data).then(()=>alert("保存成功！"));
 }
 
