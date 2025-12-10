@@ -92,13 +92,13 @@ function loadTable(){
       <td><div class="text-clamp" contenteditable="true" data-full="${row.name||''}" oninput="updateRowTime(${rowIndex})">${row.name||''}</div></td>
       <td>
         <div class="ratings-container">${renderRatings(rowIndex,row.ratings)}</div>
-        <button onclick="addRating(${rowIndex})">+ 新增评价</button>
+        <button onclick="addRating(${rowIndex}, event)">+ 新增评价</button>
         <div class="ratings-footer">综合评分: ${calcAvg(row.ratings)}</div>
       </td>
       <td>${renderChannels(rowIndex,row.priceChannels)}</td>
       <td><div class="text-clamp" contenteditable="true" data-full="${row.note||''}" oninput="updateRowTime(${rowIndex})">${row.note||''}</div></td>
       <td>${row.updateTime||''}</td>
-      <td><button onclick="deleteRow(${rowIndex})">删除</button></td>
+      <td><button onclick="deleteRow(${rowIndex}, event)">删除</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -109,13 +109,14 @@ function renderRatings(rowIndex,ratings){
   return ratings.map((r,rIndex)=>{
     let stars="";
     for(let i=1;i<=5;i++){
-      stars += `<span class="star ${i<=r.rate?'active':''}" onclick="setRating(${rowIndex},${rIndex},${i})">★</span>`;
+      stars += `<span class="star ${i<=r.rate?'active':''}" onclick="setRating(${rowIndex},${rIndex},${i}, event)">★</span>`;
     }
     return `<div>${r.person}: ${stars}</div>`;
   }).join('');
 }
 
-function setRating(rowIndex,rIndex,value){
+function setRating(rowIndex,rIndex,value,event){
+  event.stopPropagation();
   const data = currentPage==='coffee'?coffeeData:foodData;
   data[rowIndex].ratings[rIndex].rate=value;
   updateRowTime(rowIndex);
@@ -127,7 +128,8 @@ function calcAvg(ratings){
   return (ratings.reduce((s,r)=>s+r.rate,0)/ratings.length).toFixed(1);
 }
 
-function addRating(rowIndex){
+function addRating(rowIndex,event){
+  event.stopPropagation();
   const person = prompt("请输入评价人员姓名:");
   if(!person) return;
   const data = currentPage==='coffee'?coffeeData:foodData;
@@ -143,30 +145,30 @@ function renderChannels(rowIndex,channels){
   let html='<div>';
   channels.forEach((item,i)=>{
     html += `<div style="margin-bottom:4px;">
-      <select onchange="setChannel(${rowIndex},${i},this.value)">
+      <select onchange="setChannel(${rowIndex},${i},this.value, event)">
         <option ${item.channel==='抖音'?'selected':''}>抖音</option>
         <option ${item.channel==='美团'?'selected':''}>美团</option>
         <option ${item.channel==='京东'?'selected':''}>京东</option>
         <option ${item.channel==='饿了么'?'selected':''}>饿了么</option>
       </select>
-      <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value)" style="width:60px"/>
-      <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value)" style="width:100px"/>
-      <button onclick="removeChannel(${rowIndex},${i})">删除</button>
+      <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value, event)" style="width:60px"/>
+      <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value, event)" style="width:100px"/>
+      <button onclick="removeChannel(${rowIndex},${i}, event)">删除</button>
     </div>`;
   });
-  html += `<button onclick="addChannel(${rowIndex})">添加渠道</button></div>`;
+  html += `<button onclick="addChannel(${rowIndex}, event)">添加渠道</button></div>`;
   return html;
 }
 
-function addChannel(rowIndex){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.push({channel:'抖音',price:'',note:''}); updateRowTime(rowIndex); loadTable();}
-function removeChannel(rowIndex,i){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.splice(i,1); updateRowTime(rowIndex); loadTable();}
-function setChannel(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].channel=value; updateRowTime(rowIndex);}
-function setPrice(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].price=value; updateRowTime(rowIndex);}
-function setChannelNote(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].note=value; updateRowTime(rowIndex);}
+function addChannel(rowIndex,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.push({channel:'抖音',price:'',note:''}); updateRowTime(rowIndex); loadTable();}
+function removeChannel(rowIndex,i,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.splice(i,1); updateRowTime(rowIndex); loadTable();}
+function setChannel(rowIndex,i,value,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].channel=value; updateRowTime(rowIndex);}
+function setPrice(rowIndex,i,value,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].price=value; updateRowTime(rowIndex);}
+function setChannelNote(rowIndex,i,value,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].note=value; updateRowTime(rowIndex);}
 
 // ===== 新增/删除行 =====
 function addRow(){ const data=currentPage==='coffee'?coffeeData:foodData; data.push({brand:"",name:"",note:"",priceChannels:[],updateTime:"",ratings:[]}); loadTable();}
-function deleteRow(index){ const data=currentPage==='coffee'?coffeeData:foodData; data.splice(index,1); loadTable();}
+function deleteRow(index,event){ event.stopPropagation(); const data=currentPage==='coffee'?coffeeData:foodData; data.splice(index,1); loadTable();}
 function updateRowTime(rowIndex){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].updateTime=new Date().toLocaleString();}
 
 // ===== 保存到 Firebase =====
@@ -195,9 +197,8 @@ function normalizeData(val,defaultArr){
   }));
 }
 
-
-//db.ref('coffee').on('value',snapshot=>{ coffeeData=normalizeData(snapshot.val(),[{brand:"瑞幸咖啡",name:"生椰拿铁",note:"经典推荐",priceChannels:[],updateTime:'',ratings:[]},{brand:"瑞幸咖啡",name:"厚乳拿铁",note:"醇厚顺口",priceChannels:[],updateTime:'',ratings:[]}]); if(currentPage==='coffee') loadTable();});
-//db.ref('food').on('value',snapshot=>{ foodData=normalizeData(snapshot.val(),[]); if(currentPage==='food') loadTable();});
+db.ref('coffee').on('value',snapshot=>{ coffeeData=normalizeData(snapshot.val(),[{brand:"瑞幸咖啡",name:"生椰拿铁",note:"经典推荐",priceChannels:[],updateTime:'',ratings:[]}]); if(currentPage==='coffee') loadTable();});
+db.ref('food').on('value',snapshot=>{ foodData=normalizeData(snapshot.val(),[]); if(currentPage==='food') loadTable();});
 
 // ===== 列宽拖拽 =====
 function makeColumnsResizable(table){
@@ -220,4 +221,3 @@ window.onload=function(){ makeColumnsResizable(document.getElementById("dataTabl
 </script>
 </body>
 </html>
-
