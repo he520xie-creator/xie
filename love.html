@@ -1,23 +1,32 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>奶茶咖啡 & 外卖美食（实时同步版）</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    .nav { margin-bottom: 20px; }
-    button { margin-right: 10px; padding: 6px 12px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
-    .star { cursor: pointer; font-size: 20px; color: #ccc; }
-    .star.active { color: gold; }
-    .add-row { margin-top: 10px; padding: 6px 12px; }
-    select, input { margin-right: 4px; }
-  </style>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>奶茶咖啡 & 外卖美食（多人评分可滚动）</title>
+<style>
+body { font-family: Arial; padding: 20px; }
+.nav { margin-bottom: 20px; }
+button { margin-right: 10px; padding: 6px 12px; cursor: pointer; }
+table { width:100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+th, td { border:1px solid #ccc; padding:6px; vertical-align: top; word-break: break-word; }
+.star { font-size:20px; cursor:pointer; color:#ccc; display:inline-block; }
+.star.active { color: gold; }
+.add-row { margin-top:10px; padding:6px 12px; }
+select,input { margin-right:4px; }
+th { position: relative; user-select: none; }
+th .resizer { position:absolute; right:0; top:0; width:5px; cursor: col-resize; user-select:none; height:100%; }
+
+/* 文字三行截断 */
+.text-clamp { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; position:relative; }
+.text-clamp:hover::after { content:attr(data-full); position:absolute; background:#fff; border:1px solid #ccc; padding:6px; white-space: pre-wrap; z-index:10; left:0; top:100%; max-width:400px; }
+
+/* 推荐指数滚动容器 */
+.ratings-container { max-height:90px; overflow-y:auto; margin-bottom:4px; }
+.ratings-footer { font-weight:bold; margin-top:4px; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -28,191 +37,185 @@
 </div>
 
 <h2 id="pageTitle">奶茶咖啡</h2>
-
 <table id="dataTable">
-  <thead>
-    <tr>
-      <th>品牌</th>
-      <th>名称</th>
-      <th>推荐指数</th>
-      <th>最低价格 / 渠道</th>
-      <th>备注</th>
-      <th>更新时间</th>
-      <th>操作</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+<thead>
+<tr>
+  <th>品牌</th>
+  <th>名称</th>
+  <th>推荐指数</th>
+  <th>最低价格 / 渠道</th>
+  <th>备注</th>
+  <th>更新时间</th>
+  <th>操作</th>
+</tr>
+</thead>
+<tbody></tbody>
 </table>
-
 <button class="add-row" onclick="addRow()">新增一行</button>
 
 <script>
-  // ===== Firebase 配置 =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyDMTr2d8Xn3LWgErCzkrrLdrYT57f2LYus",
-    authDomain: "love-ed668.firebaseapp.com",
-    databaseURL: "https://love-ed668-default-rtdb.firebaseio.com",
-    projectId: "love-ed668",
-    storageBucket: "love-ed668.firebasestorage.app",
-    messagingSenderId: "681500198170",
-    appId: "1:681500198170:web:ff0340901980dce6a518a3",
-    measurementId: "G-78KRG0QCG7"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+// ===== Firebase 配置 =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDMTr2d8Xn3LWgErCzkrrLdrYT57f2LYus",
+  authDomain: "love-ed668.firebaseapp.com",
+  databaseURL: "https://love-ed668-default-rtdb.firebaseio.com",
+  projectId: "love-ed668",
+  storageBucket: "love-ed668.firebasestorage.app",
+  messagingSenderId: "681500198170",
+  appId: "1:681500198170:web:ff0340901980dce6a518a3",
+  measurementId: "G-78KRG0QCG7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  let coffeeData = [];
-  let foodData = [];
-  let currentPage = 'coffee';
+let coffeeData = [];
+let foodData = [];
+let currentPage = 'coffee';
 
-  function switchPage(page) {
-    currentPage = page;
-    document.getElementById("pageTitle").innerText = page === 'coffee' ? "奶茶咖啡" : "外卖美食";
-    loadTable();
-  }
-
-  function loadTable() {
-    const tbody = document.querySelector("#dataTable tbody");
-    tbody.innerHTML = "";
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-
-    data.forEach((row, index) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td contenteditable="true" oninput="updateRowTime(${index})">${row.brand}</td>
-        <td contenteditable="true" oninput="updateRowTime(${index})">${row.name}</td>
-        <td>${createStars(index, row.rate)}</td>
-        <td>${createPriceChannelsCell(index, row.priceChannels)}</td>
-        <td contenteditable="true" oninput="updateRowTime(${index})">${row.note}</td>
-        <td>${row.updateTime || ''}</td>
-        <td><button onclick="deleteRow(${index})">删除</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function createStars(rowIndex, rate) {
-    let stars = "";
-    for (let i = 1; i <= 5; i++) {
-      stars += `<span class="star ${i <= rate ? 'active' : ''}" onclick="setRate(${rowIndex}, ${i})">★</span>`;
-    }
-    return stars;
-  }
-
-  function setRate(rowIndex, value) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].rate = value;
-    updateRowTime(rowIndex);
-    loadTable();
-  }
-
-  function addRow() {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data.push({
-      brand: "", 
-      name: "", 
-      rate: 0, 
-      note: "", 
-      priceChannels: [], 
-      updateTime: ''
-    });
-    loadTable();
-  }
-
-  function deleteRow(index) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data.splice(index, 1);
-    loadTable();
-    saveData();
-  }
-
-  // ===== 最低价格 / 渠道列 =====
-  function createPriceChannelsCell(rowIndex, priceChannels) {
-    let html = '<div>';
-    priceChannels.forEach((item, i) => {
-      html += `
-        <div style="margin-bottom:4px;">
-          <select onchange="setChannel(${rowIndex}, ${i}, this.value)">
-            <option ${item.channel==='抖音'?'selected':''}>抖音</option>
-            <option ${item.channel==='美团'?'selected':''}>美团</option>
-            <option ${item.channel==='京东'?'selected':''}>京东</option>
-            <option ${item.channel==='饿了么'?'selected':''}>饿了么</option>
-          </select>
-          <input type="text" placeholder="价格" value="${item.price}" onchange="setPrice(${rowIndex}, ${i}, this.value)" style="width:60px"/>
-          <input type="text" placeholder="备注" value="${item.note}" onchange="setChannelNote(${rowIndex}, ${i}, this.value)" style="width:100px"/>
-          <button onclick="removeChannel(${rowIndex}, ${i})">删除</button>
-        </div>
-      `;
-    });
-    html += `<button onclick="addChannel(${rowIndex})">添加渠道</button></div>`;
-    return html;
-  }
-
-  function addChannel(rowIndex) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].priceChannels.push({ channel:'抖音', price:'', note:'' });
-    updateRowTime(rowIndex);
-    loadTable();
-  }
-
-  function removeChannel(rowIndex, i) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].priceChannels.splice(i, 1);
-    updateRowTime(rowIndex);
-    loadTable();
-  }
-
-  function setChannel(rowIndex, i, value) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].priceChannels[i].channel = value;
-    updateRowTime(rowIndex);
-  }
-
-  function setPrice(rowIndex, i, value) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].priceChannels[i].price = value;
-    updateRowTime(rowIndex);
-  }
-
-  function setChannelNote(rowIndex, i, value) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].priceChannels[i].note = value;
-    updateRowTime(rowIndex);
-  }
-
-  function updateRowTime(rowIndex) {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    data[rowIndex].updateTime = new Date().toLocaleString();
-  }
-
-  function saveData() {
-    const data = currentPage === 'coffee' ? coffeeData : foodData;
-    const rows = document.querySelectorAll("#dataTable tbody tr");
-    rows.forEach((tr, index) => {
-      const tds = tr.querySelectorAll("td");
-      data[index].brand = tds[0].innerText;
-      data[index].name = tds[1].innerText;
-      data[index].note = tds[4].innerText;
-    });
-    db.ref(currentPage).set(data).then(() => alert("保存成功！"));
-  }
-
-  // ===== Firebase 实时同步 =====
-  db.ref('coffee').on('value', snapshot => {
-    coffeeData = snapshot.val() || [
-      { brand: "瑞幸咖啡", name: "生椰拿铁", rate: 5, note: "经典推荐", priceChannels: [], updateTime: '' },
-      { brand: "瑞幸咖啡", name: "厚乳拿铁", rate: 4, note: "醇厚顺口", priceChannels: [], updateTime: '' }
-    ];
-    if (currentPage === 'coffee') loadTable();
-  });
-
-  db.ref('food').on('value', snapshot => {
-    foodData = snapshot.val() || [];
-    if (currentPage === 'food') loadTable();
-  });
-
+function switchPage(page){
+  currentPage=page;
+  document.getElementById("pageTitle").innerText=page==='coffee'?"奶茶咖啡":"外卖美食";
   loadTable();
-</script>
+}
 
+// ===== 渲染表格 =====
+function loadTable(){
+  const tbody=document.querySelector("#dataTable tbody");
+  tbody.innerHTML="";
+  const data = currentPage==='coffee'?coffeeData:foodData;
+  data.forEach((row,rowIndex)=>{
+    if(!Array.isArray(row.priceChannels)) row.priceChannels=[];
+    if(!Array.isArray(row.ratings)) row.ratings=[];
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><div class="text-clamp" contenteditable="true" data-full="${row.brand||''}" oninput="updateRowTime(${rowIndex})">${row.brand||''}</div></td>
+      <td><div class="text-clamp" contenteditable="true" data-full="${row.name||''}" oninput="updateRowTime(${rowIndex})">${row.name||''}</div></td>
+      <td>
+        <div class="ratings-container">${renderRatings(rowIndex,row.ratings)}</div>
+        <button onclick="addRating(${rowIndex})">+ 新增评价</button>
+        <div class="ratings-footer">综合评分: ${calcAvg(row.ratings)}</div>
+      </td>
+      <td>${renderChannels(rowIndex,row.priceChannels)}</td>
+      <td><div class="text-clamp" contenteditable="true" data-full="${row.note||''}" oninput="updateRowTime(${rowIndex})">${row.note||''}</div></td>
+      <td>${row.updateTime||''}</td>
+      <td><button onclick="deleteRow(${rowIndex})">删除</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== 多人评分 =====
+function renderRatings(rowIndex,ratings){
+  return ratings.map((r,rIndex)=>{
+    let stars="";
+    for(let i=1;i<=5;i++){
+      stars += `<span class="star ${i<=r.rate?'active':''}" onclick="setRating(${rowIndex},${rIndex},${i})">★</span>`;
+    }
+    return `<div>${r.person}: ${stars}</div>`;
+  }).join('');
+}
+
+function setRating(rowIndex,rIndex,value){
+  const data = currentPage==='coffee'?coffeeData:foodData;
+  data[rowIndex].ratings[rIndex].rate=value;
+  updateRowTime(rowIndex);
+  loadTable();
+}
+
+function calcAvg(ratings){
+  if(!ratings.length) return "-";
+  return (ratings.reduce((s,r)=>s+r.rate,0)/ratings.length).toFixed(1);
+}
+
+function addRating(rowIndex){
+  const person = prompt("请输入评价人员姓名:");
+  if(!person) return;
+  const data = currentPage==='coffee'?coffeeData:foodData;
+  if(!Array.isArray(data[rowIndex].ratings)) data[rowIndex].ratings=[];
+  data[rowIndex].ratings.push({person,rate:0});
+  updateRowTime(rowIndex);
+  loadTable();
+}
+
+// ===== 渠道/最低价 =====
+function renderChannels(rowIndex,channels){
+  if(!Array.isArray(channels)) channels=[];
+  let html='<div>';
+  channels.forEach((item,i)=>{
+    html += `<div style="margin-bottom:4px;">
+      <select onchange="setChannel(${rowIndex},${i},this.value)">
+        <option ${item.channel==='抖音'?'selected':''}>抖音</option>
+        <option ${item.channel==='美团'?'selected':''}>美团</option>
+        <option ${item.channel==='京东'?'selected':''}>京东</option>
+        <option ${item.channel==='饿了么'?'selected':''}>饿了么</option>
+      </select>
+      <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value)" style="width:60px"/>
+      <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value)" style="width:100px"/>
+      <button onclick="removeChannel(${rowIndex},${i})">删除</button>
+    </div>`;
+  });
+  html += `<button onclick="addChannel(${rowIndex})">添加渠道</button></div>`;
+  return html;
+}
+
+function addChannel(rowIndex){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.push({channel:'抖音',price:'',note:''}); updateRowTime(rowIndex); loadTable();}
+function removeChannel(rowIndex,i){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels.splice(i,1); updateRowTime(rowIndex); loadTable();}
+function setChannel(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].channel=value; updateRowTime(rowIndex);}
+function setPrice(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].price=value; updateRowTime(rowIndex);}
+function setChannelNote(rowIndex,i,value){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].priceChannels[i].note=value; updateRowTime(rowIndex);}
+
+// ===== 新增/删除行 =====
+function addRow(){ const data=currentPage==='coffee'?coffeeData:foodData; data.push({brand:"",name:"",note:"",priceChannels:[],updateTime:"",ratings:[]}); loadTable();}
+function deleteRow(index){ const data=currentPage==='coffee'?coffeeData:foodData; data.splice(index,1); loadTable();}
+function updateRowTime(rowIndex){ const data=currentPage==='coffee'?coffeeData:foodData; data[rowIndex].updateTime=new Date().toLocaleString();}
+
+// ===== 保存到 Firebase =====
+function saveData(){
+  const data=currentPage==='coffee'?coffeeData:foodData;
+  const rows=document.querySelectorAll("#dataTable tbody tr");
+  rows.forEach((tr,index)=>{
+    const tds=tr.querySelectorAll("td .text-clamp");
+    data[index].brand=tds[0].innerText;
+    data[index].name=tds[1].innerText;
+    data[index].note=tds[2].innerText;
+  });
+  db.ref(currentPage).set(data).then(()=>alert("保存成功！"));
+}
+
+// ===== Firebase 实时同步 =====
+function normalizeData(val,defaultArr){
+  if(!val) return defaultArr;
+  return val.map(item=>({
+    brand:item.brand||'',
+    name:item.name||'',
+    note:item.note||'',
+    priceChannels:Array.isArray(item.priceChannels)?item.priceChannels:[],
+    updateTime:item.updateTime||'',
+    ratings:Array.isArray(item.ratings)?item.ratings:[]
+  }));
+}
+
+db.ref('coffee').on('value',snapshot=>{ coffeeData=normalizeData(snapshot.val(),[{brand:"瑞幸咖啡",name:"生椰拿铁",note:"经典推荐",priceChannels:[],updateTime:'',ratings:[]},{brand:"瑞幸咖啡",name:"厚乳拿铁",note:"醇厚顺口",priceChannels:[],updateTime:'',ratings:[]}]); if(currentPage==='coffee') loadTable();});
+db.ref('food').on('value',snapshot=>{ foodData=normalizeData(snapshot.val(),[]); if(currentPage==='food') loadTable();});
+
+// ===== 列宽拖拽 =====
+function makeColumnsResizable(table){
+  const cols=table.querySelectorAll("th");
+  cols.forEach(th=>{
+    const resizer=document.createElement("div");
+    resizer.className="resizer";
+    th.appendChild(resizer);
+    let startX,startWidth;
+    resizer.addEventListener("mousedown",function(e){
+      startX=e.pageX; startWidth=th.offsetWidth;
+      document.addEventListener("mousemove",onMouseMove);
+      document.addEventListener("mouseup",onMouseUp);
+    });
+    function onMouseMove(e){ th.style.width=(startWidth+(e.pageX-startX))+"px"; }
+    function onMouseUp(){ document.removeEventListener("mousemove",onMouseMove); document.removeEventListener("mouseup",onMouseUp); }
+  });
+}
+window.onload=function(){ makeColumnsResizable(document.getElementById("dataTable")); }
+</script>
 </body>
 </html>
