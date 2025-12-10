@@ -195,8 +195,9 @@ function normalizeData(val,defaultArr){
   }));
 }
 
-db.ref('coffee').on('value',snapshot=>{ coffeeData=normalizeData(snapshot.val(),[{brand:"瑞幸咖啡",name:"生椰拿铁",note:"经典推荐",priceChannels:[],updateTime:'',ratings:[]},{brand:"瑞幸咖啡",name:"厚乳拿铁",note:"醇厚顺口",priceChannels:[],updateTime:'',ratings:[]}]); if(currentPage==='coffee') loadTable();});
-db.ref('food').on('value',snapshot=>{ foodData=normalizeData(snapshot.val(),[]); if(currentPage==='food') loadTable();});
+
+//db.ref('coffee').on('value',snapshot=>{ coffeeData=normalizeData(snapshot.val(),[{brand:"瑞幸咖啡",name:"生椰拿铁",note:"经典推荐",priceChannels:[],updateTime:'',ratings:[]},{brand:"瑞幸咖啡",name:"厚乳拿铁",note:"醇厚顺口",priceChannels:[],updateTime:'',ratings:[]}]); if(currentPage==='coffee') loadTable();});
+//db.ref('food').on('value',snapshot=>{ foodData=normalizeData(snapshot.val(),[]); if(currentPage==='food') loadTable();});
 
 // ===== 列宽拖拽 =====
 function makeColumnsResizable(table){
@@ -219,3 +220,4 @@ window.onload=function(){ makeColumnsResizable(document.getElementById("dataTabl
 </script>
 </body>
 </html>
+
