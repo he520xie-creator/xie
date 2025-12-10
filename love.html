@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>奶茶咖啡 & 外卖美食</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .nav { margin-bottom: 20px; }
+    button { margin-right: 10px; padding: 8px 12px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .star { cursor: pointer; font-size: 20px; color: #ccc; }
+    .star.active { color: gold; }
+    .add-row { margin-top: 10px; padding: 6px 12px; }
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <button onclick="switchPage('coffee')">奶茶咖啡</button>
+  <button onclick="switchPage('food')">外卖美食</button>
+</div>
+
+<h2 id="pageTitle">奶茶咖啡</h2>
+
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th>品牌</th>
+      <th>名称</th>
+      <th>推荐指数</th>
+      <th>备注</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<button class="add-row" onclick="addRow()">新增一行</button>
+
+<script>
+  const coffeeData = [
+    { brand: "瑞幸咖啡", name: "生椰拿铁", rate: 5, note: "经典推荐" },
+    { brand: "瑞幸咖啡", name: "厚乳拿铁", rate: 4, note: "醇厚顺口" }
+  ];
+
+  const foodData = [];
+  let currentPage = 'coffee';
+
+  function switchPage(page) {
+    currentPage = page;
+    document.getElementById("pageTitle").innerText = page === 'coffee' ? "奶茶咖啡" : "外卖美食";
+    loadTable();
+  }
+
+  function loadTable() {
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+    const data = currentPage === 'coffee' ? coffeeData : foodData;
+
+    data.forEach((row, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td contenteditable="true">${row.brand}</td>
+        <td contenteditable="true">${row.name}</td>
+        <td>${createStars(index, row.rate)}</td>
+        <td contenteditable="true">${row.note}</td>
+        <td><button onclick="deleteRow(${index})">删除</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function createStars(rowIndex, rate) {
+    let stars = "";
+    for (let i = 1; i <= 5; i++) {
+      stars += `<span class="star ${i <= rate ? 'active' : ''}" onclick="setRate(${rowIndex}, ${i})">★</span>`;
+    }
+    return stars;
+  }
+
+  function setRate(rowIndex, value) {
+    const data = currentPage === 'coffee' ? coffeeData : foodData;
+    data[rowIndex].rate = value;
+    loadTable();
+  }
+
+  function addRow() {
+    const data = currentPage === 'coffee' ? coffeeData : foodData;
+    data.push({ brand: "", name: "", rate: 0, note: "" });
+    loadTable();
+  }
+
+  function deleteRow(index) {
+    const data = currentPage === 'coffee' ? coffeeData : foodData;
+    data.splice(index, 1);
+    loadTable();
+  }
+
+  loadTable();
+</script>
+
+</body>
+</html>
