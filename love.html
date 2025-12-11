@@ -180,6 +180,7 @@ function renderChannels(rowIndex,channels){
         <option ${item.channel==='美团'?'selected':''}>美团</option>
         <option ${item.channel==='京东'?'selected':''}>京东</option>
         <option ${item.channel==='饿了么'?'selected':''}>饿了么</option>
+        <option ${item.channel==='其他'?'selected':''}>其他</option>
       </select>
       <input type="text" placeholder="价格" value="${item.price||''}" onchange="setPrice(${rowIndex},${i},this.value,event)" style="width:60px"/>
       <input type="text" placeholder="备注" value="${item.note||''}" onchange="setChannelNote(${rowIndex},${i},this.value,event)" style="width:100px"/>
@@ -244,4 +245,5 @@ window.onload=function(){ makeColumnsResizable(document.getElementById("dataTabl
 </script>
 </body>
 </html>
+
 
