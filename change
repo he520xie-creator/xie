@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>纯色背景 + 可拖动颜色面板</title>
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color .6s ease;
+  }
+
+  #panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 180px;
+    background: rgba(0,0,0,.45);
+    color: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 14px;
+    cursor: move;
+    box-shadow: 0 6px 16px rgba(0,0,0,.3);
+  }
+
+  #panel * {
+    cursor: default;
+  }
+
+  #panel h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    cursor: move;
+  }
+
+  #panel input, #panel button {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+  }
+
+  #panel button {
+    cursor: pointer;
+  }
+
+  #tip {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,.45);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <h4>🎨 颜色控制</h4>
+  <input type="color" id="picker">
+  <input type="text" id="hex" placeholder="#FF5733">
+  <button onclick="applyColor()">应用颜色</button>
+  <button onclick="randomColor()">随机颜色</button>
+</div>
+
+<div id="tip">5 秒自动切换 · 点击页面切换</div>
+
+<script>
+let auto = true;
+const panel = document.getElementById("panel");
+const picker = document.getElementById("picker");
+const hex = document.getElementById("hex");
+
+/* ---------- 颜色逻辑 ---------- */
+function rand() { return Math.floor(Math.random() * 256); }
+
+function randomColor() {
+  auto = true;
+  setColor(`rgb(${rand()},${rand()},${rand()})`);
+}
+
+function applyColor() {
+  auto = false;
+  setColor(hex.value || picker.value);
+}
+
+function setColor(c) {
+  document.body.style.backgroundColor = c;
+}
+
+/* ---------- 自动切换 ---------- */
+setInterval(() => {
+  if (auto) randomColor();
+}, 5000);
+
+/* ---------- 点击切换 ---------- */
+document.body.addEventListener("click", e => {
+  if (!panel.contains(e.target) && auto) randomColor();
+});
+
+/* ---------- 同步取色器 ---------- */
+picker.addEventListener("input", e => hex.value = e.target.value);
+
+/* ---------- 面板拖动 ---------- */
+let dragging = false, offsetX = 0, offsetY = 0;
+
+panel.addEventListener("mousedown", e => {
+  dragging = true;
+  offsetX = e.clientX - panel.offsetLeft;
+  offsetY = e.clientY - panel.offsetTop;
+});
+
+document.addEventListener("mousemove", e => {
+  if (!dragging) return;
+
+  let x = e.clientX - offsetX;
+  let y = e.clientY - offsetY;
+
+  const maxX = window.innerWidth - panel.offsetWidth;
+  const maxY = window.innerHeight - panel.offsetHeight;
+
+  panel.style.left = Math.max(0, Math.min(x, maxX)) + "px";
+  panel.style.top = Math.max(0, Math.min(y, maxY)) + "px";
+});
+
+document.addEventListener("mouseup", () => dragging = false);
+
+/* ---------- 窗口变化自动修正 ---------- */
+window.addEventListener("resize", () => {
+  const maxX = window.innerWidth - panel.offsetWidth;
+  const maxY = window.innerHeight - panel.offsetHeight;
+  panel.style.left = Math.min(panel.offsetLeft, maxX) + "px";
+  panel.style.top = Math.min(panel.offsetTop, maxY) + "px";
+});
+
+/* ---------- 初始化 ---------- */
+randomColor();
+</script>
+
+</body>
+</html>
