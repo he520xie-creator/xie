@@ -72,7 +72,7 @@
   <button onclick="randomColor()">随机颜色</button>
 </div>
 
-<div id="tip">1 秒自动切换 · 点击页面切换</div>
+<div id="tip">3 秒自动切换 · 点击页面切换</div>
 
 <script>
 let auto = true;
@@ -100,7 +100,7 @@ function setColor(c) {
 /* ---------- 自动切换 ---------- */
 setInterval(() => {
   if (auto) randomColor();
-}, 1000);
+}, 3000);
 
 /* ---------- 点击切换 ---------- */
 document.body.addEventListener("click", e => {
