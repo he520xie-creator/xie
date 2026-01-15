@@ -66,8 +66,9 @@ const firebaseConfig = {
   appId: "1:681500198170:web:ff0340901980dce6a518a3",
   measurementId: "G-78KRG0QCG7"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 let coffeeData = [];
 let foodData = [];
@@ -245,5 +246,6 @@ window.onload=function(){ makeColumnsResizable(document.getElementById("dataTabl
 </script>
 </body>
 </html>
+
 
 
